@@ -39,7 +39,7 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
 
     let borrow_live_at_start = Instant::now();
 
-    let borrow_live_at = {
+    let errors = {
         // Create a new iteration context, ...
         let mut iteration = Iteration::new();
 
@@ -66,6 +66,8 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
         let killed = all_facts.killed.into();
         let region_live_at = iteration.variable::<((Region, Point), ())>("region_live_at");
         let cfg_edge_p = iteration.variable::<(Point, Point)>("cfg_edge_p");
+        
+        let errors = iteration.variable("errors");
 
         // load initial facts.
         subset.insert(all_facts.outlives.into());
@@ -135,6 +137,9 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
 
             // borrow_live_at(B, P) :- requires(R, B, P), region_live_at(R, P)
             borrow_live_at.from_join(&requires_rp, &region_live_at, |&(_r, p), &b, &()| (b, p));
+            
+            // .decl errors(B, P) :- invalidates(B, P), borrow_live_at(B, P).
+            errors.from_join(&invalidates, &borrow_live_at, |&(b, p), &(), &()| (b, p));
         }
 
         if dump_enabled {
@@ -172,22 +177,31 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
                     .or_insert(vec![])
                     .push(*region);
             }
+            
+            let borrow_live_at = borrow_live_at.complete();
+            for ((borrow, location), ()) in &borrow_live_at.elements {
+                result
+                    .borrow_live_at
+                    .entry(*location)
+                    .or_insert(Vec::new())
+                    .push(*borrow);
+            }
         }
 
-        borrow_live_at.complete()
+        errors.complete()
     };
 
     if dump_enabled {
         println!(
-            "borrow_live_at is complete: {} tuples, {:?}",
-            borrow_live_at.len(),
-            borrow_live_at_start.elapsed()
+            "errors is complete: {} tuples, {:?}",
+            errors.len(),
+            timer.elapsed()
         );
     }
 
-    for (borrow, location) in &borrow_live_at.elements {
+    for (borrow, location) in &errors.elements {
         result
-            .borrow_live_at
+            .errors
             .entry(*location)
             .or_insert(Vec::new())
             .push(*borrow);

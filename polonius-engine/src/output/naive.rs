@@ -187,10 +187,10 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
                     .push(*region);
             }
             
-            let new_borrow_live_at = new_borrow_live_at.complete();
-            for ((borrow, location), ()) in &new_borrow_live_at.elements {
+            let borrow_live_at = borrow_live_at.complete();
+            for (borrow, location) in &borrow_live_at.elements {
                 result
-                    .new_borrow_live_at
+                    .borrow_live_at
                     .entry(*location)
                     .or_insert(Vec::new())
                     .push(*borrow);

@@ -46,7 +46,7 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
         // .. some variables, ..
         let subset = iteration.variable::<(Region, Region, Point)>("subset");
         let requires = iteration.variable::<(Region, Loan, Point)>("requires");
-        let borrow_live_at = iteration.variable::<((Loan, Point), ())>("borrow_live_at");
+        let borrow_live_at = iteration.variable::<(Loan, Point)>("borrow_live_at");
         
         // `invalidates` facts, stored ready for joins
         let invalidates = iteration.variable::<((Loan, Point), ())>("invalidates");
@@ -143,6 +143,8 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
 
             // borrow_live_at(B, P) :- requires(R, B, P), region_live_at(R, P)
             borrow_live_at.from_join(&requires_rp, &region_live_at, |&(_r, p), &b, &()| (b, p));
+            
+            new_borrow_live_at.from_map(&borrow_live_at, |&(b, p)| ((b, p), ()));
             
             // .decl errors(B, P) :- invalidates(B, P), borrow_live_at(B, P).
             errors.from_join(&invalidates, &borrow_live_at, |&(b, p), &(), &()| (b, p));

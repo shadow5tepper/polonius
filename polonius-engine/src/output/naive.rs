@@ -37,7 +37,7 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
 
     let mut result = Output::new(dump_enabled);
 
-    let borrow_live_at_start = Instant::now();
+    let timer = Instant::now();
 
     let errors = {
         // Create a new iteration context, ...
@@ -47,6 +47,9 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
         let subset = iteration.variable::<(Region, Region, Point)>("subset");
         let requires = iteration.variable::<(Region, Loan, Point)>("requires");
         let borrow_live_at = iteration.variable::<(Loan, Point)>("borrow_live_at");
+        
+        // `invalidates` facts, stored ready for joins
+        let invalidates = iteration.variable::<((Loan, Point), ())>("invalidates");
 
         // different indices for `subset`.
         let subset_r1p = iteration.variable_indistinct("subset_r1p");
@@ -74,6 +77,9 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
         requires.insert(all_facts.borrow_region.into());
         region_live_at.insert(Relation::from(
             all_facts.region_live_at.iter().map(|&(r, p)| ((r, p), ())),
+        ));
+        invalidates.insert(Relation::from(
+            all_facts.invalidates.iter().map(|&(p, b)| ((b, p), ())),
         ));
         cfg_edge_p.insert(all_facts.cfg_edge.clone().into());
 

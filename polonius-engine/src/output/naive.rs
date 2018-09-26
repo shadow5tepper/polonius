@@ -47,7 +47,7 @@ pub(super) fn compute<Region: Atom, Loan: Atom, Point: Atom>(
         let subset = iteration.variable::<(Region, Region, Point)>("subset");
         let requires = iteration.variable::<(Region, Loan, Point)>("requires");
         let borrow_live_at = iteration.variable::<(Loan, Point)>("borrow_live_at");
-        let new_borrow_live_at = iteration.variable::<((Loan, Point), ()>("borrow_live_at");
+        let new_borrow_live_at = iteration.variable::<((Loan, Point), ())>("borrow_live_at");
         
         // `invalidates` facts, stored ready for joins
         let invalidates = iteration.variable::<((Loan, Point), ())>("invalidates");
